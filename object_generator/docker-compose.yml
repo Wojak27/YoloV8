@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  render:
+    build: .
+    ports:
+     - "80:80"
+    environment:
+      - DISPLAY=unix${DISPLAY}
+    volumes:
+      - ./data:/usr/src/app/data
+      - ./:/usr/src/app
+    # command: xvfb-run --server-args="-screen 0 1024x768x24" python test_render.py
+    # command: xvfb-run -e /dev/stdout --server-num=1 --server-args="-screen 0 1024x768x24" python test_render.py
+
