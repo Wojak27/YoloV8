@@ -68,7 +68,7 @@ def random_position(obj, height_offset):
     pass
 def create_cube(size):
     cube = trimesh.creation.box(extents=[size * 0.6, size * 0.59, size * 0.29])
-    cube.visual.vertex_colors = [0, 0, 255, 255] #random_color()
+    cube.visual.vertex_colors = random_color()
     random_position(cube, size * 0.29 )
     return cube
 
@@ -96,19 +96,19 @@ def create_triangular_prism(size):
 
     # Create the mesh
     prism = trimesh.Trimesh(vertices=vertices, faces=faces)
-    prism.visual.vertex_colors = [0, 255, 0, 255] #random_color()
+    prism.visual.vertex_colors = random_color()
     random_position(prism, height)
     return prism
 
 def create_hole_box(size):
-    box = trimesh.creation.box(extents=np.array([0.34, 0.6, 0.34]) * size)
-    cylinder = trimesh.creation.cylinder(radius=0.1 * size, height=0.34 * size, sections=32)
+    box = trimesh.creation.box(extents=np.array([ 0.6, 0.68, 0.34 ]) * size)
+    cylinder = trimesh.creation.cylinder(radius=0.2 * size, height=0.34 * size, sections=32)
     box_with_hole = box.difference(cylinder, engine='scad')
     plane_normal = [0, 1, 0]  # Normal vector to the plane (x-axis in this case)
     plane_origin = box_with_hole.centroid  # The plane will pass through the mesh centroid
 
     box_with_hole = box_with_hole.slice_plane(plane_origin, plane_normal, cap=True)
-    box_with_hole.visual.vertex_colors = [255, 0, 0, 255] #= random_color()
+    box_with_hole.visual.vertex_colors = random_color()
     random_position(box_with_hole, 0.34 * size)
     
     return box_with_hole
@@ -134,7 +134,7 @@ scene = pyrender.Scene()
 
 
 # Add a random number of objects to the scene
-num_objects = random.randint(20, 20)  # Random number of objects
+num_objects = random.randint(0, 35)  # Random number of objects
 objects = []
 for _ in range(num_objects):
     obj = create_random_object()
