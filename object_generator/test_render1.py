@@ -1,3 +1,4 @@
+import copy 
 import os
 import numpy as np
 import trimesh
@@ -37,6 +38,11 @@ def create_pyramid(base_length, height):
 def random_position(obj, height_offset):
     x = random.uniform(-0.4 * table_size, 0.4 * table_size)
     y = random.uniform(-0.4 * table_size, 0.4 * table_size)
+    angle = np.radians(np.random.randint(0, 45))  # 45 degree rotation
+    axis = [0, 0, 1]  # Around z-axis
+    transformation_matrix = trimesh.transformations.rotation_matrix(angle, axis)
+    obj.apply_transform(transformation_matrix)
+
     obj.apply_translation([x, y, height_offset])
     count = 0
     num_tries = 0
@@ -52,21 +58,20 @@ def random_position(obj, height_offset):
         obj.apply_translation([x, y, height_offset])
         print("try: {} P object:{}".format(num_tries, len(objects)))
         for other in objects:
-            if other.intersection(obj).is_empty:
+            # if other.intersection(obj).is_empty:
+            if obj.vertices.min(0)[0] > other.vertices.max(0)[0] or obj.vertices.max(0)[0] < other.vertices.min(0)[0] \
+                or obj.vertices.min(0)[1] > other.vertices.max(0)[1] or obj.vertices.max(0)[1] < other.vertices.min(0)[1] \
+                or obj.vertices.min(0)[2] > other.vertices.max(0)[2] or obj.vertices.max(0)[2] < other.vertices.min(0)[2]:
                 count +=1
             else:
                 print("Intersecting")
     pass
 def create_cube(size):
     cube = trimesh.creation.box(extents=[size * 0.6, size * 0.59, size * 0.29])
-    cube.visual.vertex_colors = random_color()
+    cube.visual.vertex_colors = [0, 0, 255, 255] #random_color()
     random_position(cube, size * 0.29 )
     return cube
 
-def create_box(size):
-    box = trimesh.creation.box(extents=np.array([0.34, 0.6, 0.34]) * size)
-    box.visual.vertex_colors = random_color()
-    return box
 
 def create_triangular_prism(size):
     length, width, height = 0.34 * size, 0.58 * size, 0.29 * size
@@ -91,9 +96,10 @@ def create_triangular_prism(size):
 
     # Create the mesh
     prism = trimesh.Trimesh(vertices=vertices, faces=faces)
-    prism.visual.vertex_colors = random_color()
+    prism.visual.vertex_colors = [0, 255, 0, 255] #random_color()
     random_position(prism, height)
     return prism
+
 def create_hole_box(size):
     box = trimesh.creation.box(extents=np.array([0.34, 0.6, 0.34]) * size)
     cylinder = trimesh.creation.cylinder(radius=0.1 * size, height=0.34 * size, sections=32)
@@ -102,7 +108,7 @@ def create_hole_box(size):
     plane_origin = box_with_hole.centroid  # The plane will pass through the mesh centroid
 
     box_with_hole = box_with_hole.slice_plane(plane_origin, plane_normal, cap=True)
-    box_with_hole.visual.vertex_colors = random_color()
+    box_with_hole.visual.vertex_colors = [255, 0, 0, 255] #= random_color()
     random_position(box_with_hole, 0.34 * size)
     
     return box_with_hole
