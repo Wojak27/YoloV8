@@ -1,3 +1,5 @@
+import sys
+import datetime
 import copy 
 import os
 import numpy as np
@@ -7,6 +9,7 @@ import random
 import imageio
 from PIL import Image
 from trimesh import primitives
+from PIL import ImageDraw
 
 os.environ['PYOPENGL_PLATFORM'] = 'egl' 
 
@@ -43,7 +46,7 @@ def random_position(obj, height_offset):
     transformation_matrix = trimesh.transformations.rotation_matrix(angle, axis)
     obj.apply_transform(transformation_matrix)
 
-    obj.apply_translation([x, y, height_offset])
+    obj.apply_translation([x, y, height_offset - 0.1])
     count = 0
     num_tries = 0
     while num_tries < 1000 and count != len(objects):
@@ -117,11 +120,12 @@ def create_random_object():
     obj_type = random.choice(['hole_box', 'cube', 'prism'])
     size = 0.3 # random.uniform(0.1, 0.3)
     if obj_type == 'cube':
-        return create_cube(size)
+        obj = create_cube(size)
     if obj_type == 'prism':
-        return create_triangular_prism(size)
+        obj = create_triangular_prism(size)
     elif obj_type == 'hole_box':
-        return create_hole_box(size)
+        obj = create_hole_box(size)
+    return obj, obj.vertices
 
 # Create a brown table (large plane)
 table_size = 2  # half-size of the table
@@ -134,13 +138,8 @@ scene = pyrender.Scene()
 
 
 # Add a random number of objects to the scene
-num_objects = random.randint(0, 35)  # Random number of objects
-objects = []
-for _ in range(num_objects):
-    obj = create_random_object()
-    objects.append(obj)
-    obj_mesh = pyrender.Mesh.from_trimesh(obj)
-    scene.add(obj_mesh)
+
+
 
 
 # pyramid_mesh = pyrender.Mesh.from_trimesh(pyramid)
@@ -151,7 +150,7 @@ scene.add(table_mesh)
 # Set up the camera (simple perspective camera)
 camera = pyrender.PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=1.0)
 camera_position = [0, 0, 2]
-rotation_angle = np.radians(15)  # Convert 5 degrees to radians
+rotation_angle = np.radians(90)  # Convert 5 degrees to radians
 rotation_matrix = np.array([
     [1, 0, 0, 0],
     [0, np.cos(rotation_angle), -np.sin(rotation_angle), 0],
@@ -180,6 +179,17 @@ s = np.sqrt(2)/2
 #     [0, 0, 0, 1],
 # ])
 scene.add(camera, pose=camera_pose)
+
+num_objects = random.randint(1,1)  # Random number of objects
+objects = []
+vertices_list = []
+for _ in range(num_objects):
+    obj, vertices = create_random_object()
+    objects.append(obj)
+    vertices_list.append(vertices)
+    print("verticies list: ", vertices_list)
+    obj_mesh = pyrender.Mesh.from_trimesh(obj)
+    scene.add(obj_mesh)
 
 def add_random_light(scene):
     # Randomly choose a type of light
@@ -215,11 +225,59 @@ def add_random_light(scene):
 add_random_light(scene)
 
 # Render the scene
-r = pyrender.OffscreenRenderer(viewport_width = 600, viewport_height = 600)
+viewport_width = 600
+viewport_height = 600
+r = pyrender.OffscreenRenderer(viewport_width = viewport_width, viewport_height = viewport_height)
+
+
+
+# Camera matrices
+camera_node = pyrender.Node(camera=camera, matrix=camera_pose)
+view_matrix = camera_node.matrix
+projection_matrix = camera.get_projection_matrix(width=viewport_width, height=viewport_height)
+
+# Function to project 3D vertices to 2D
+def project_3d_to_2d(vertices, view_matrix):
+    # Transform vertices to camera space
+    vertices_4d = np.hstack((vertices, np.ones((vertices.shape[0], 1))))
+    vertices_cam_space = np.dot(view_matrix, vertices_4d.T).T
+
+    # For orthographic projection onto the XY plane, simply drop the Z coordinate
+    return vertices_cam_space[:, :2]
+
+
+
+
+
+
+
+# Example: Project the vertices of the sphere
+vertices_2d_list = [project_3d_to_2d(x, view_matrix) for x in vertices_list]
+# Now, vertices_2d contains the 2D projections of the sphere's vertices
+# You can use this to draw the bounding box on the image
+# Convert the rendered image to a PIL image for drawing
 
 color, depth = r.render(scene)
 img = Image.fromarray(color)
-img.save('rendered_scene.png')
+image = Image.fromarray(color)
+draw = ImageDraw.Draw(image)
+
+for vertices_2d in vertices_2d_list:
+    min_x, min_y = np.min(vertices_2d, axis=0)
+    max_x, max_y = np.max(vertices_2d, axis=0)
+    draw.rectangle([min_x, min_y, max_x, max_y], outline="red")
+
+# Calculate 2D bounding box (example)
+
+# Save or display the image
+image.save("rendered_with_bbox.png")
+image.show()
+
+
+file_name = f"output/rendered_scene{1}.png"
+os.makedirs("output", exist_ok=True)
+
+img.save(file_name)
 r.delete()
 
 # Save the rendered images
